@@ -35,6 +35,11 @@ def main():
                     raise ValueError("no volume is connected")
                 args = get_args(command_list)
                 v.mkfile(args[0])
+            elif command == 'mkdir':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                v.mkdir(args[0])
             elif command == 'quit':
                 disconnect(v)
                 sys.exit()

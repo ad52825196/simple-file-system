@@ -9,7 +9,9 @@ class DirectoryEntry:
     BLOCK_NUMBER_LENGTH = 3
     ENTRY_LENGTH = FILE_TYPE_LENGTH + MAX_FILE_NAME_LENGTH + 1 + FILE_SIZE_LENGTH + 1 + (BLOCK_NUMBER_LENGTH + 1) * MAX_NUMBER_OF_BLOCKS
 
-    def __init__(self, entry_string = None):
+    def __init__(self, entry_string = None, block_number = 0, start = 0):
+        self.block_number = block_number
+        self.start = start
         if entry_string is None:
             self.file_type = DirectoryEntry.DEFAULT_FILE_TYPE
             self.file_name = ''
@@ -43,3 +45,17 @@ class DirectoryEntry:
             MAX_FILE_NAME_LENGTH = DirectoryEntry.MAX_FILE_NAME_LENGTH, 
             FILE_SIZE_LENGTH = DirectoryEntry.FILE_SIZE_LENGTH, 
             BLOCK_NUMBER_LENGTH = DirectoryEntry.BLOCK_NUMBER_LENGTH)
+
+    def get_valid_blocks(self):
+        block_number_list = []
+        for block in self.blocks:
+            if block > 0:
+                block_number_list.append(block)
+        return block_number_list
+
+    def add_new_block(self, block_number):
+        for i in range(DirectoryEntry.MAX_NUMBER_OF_BLOCKS):
+            if self.blocks[i] == 0:
+                self.blocks[i] = block_number
+                return
+        raise IOError("cannot add more blocks to '{}'".format(self.file_name))
