@@ -1,5 +1,6 @@
 import csv
 import sys
+import directoryentry
 import volume
 
 def main():
@@ -17,6 +18,23 @@ def main():
                     v.reconnect()
                 except:
                     v = None
+                    raise
+            elif command == 'ls':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                entry_list = v.ls(args[0])
+                LS_FORMAT = "{:4}    {:8}    {:4}"
+                title = LS_FORMAT.format('type', 'filename', 'size')
+                print(title)
+                print("-" * len(title))
+                for entry in entry_list:
+                    print(LS_FORMAT.format(entry.file_type, entry.file_name, entry.file_length))
+            elif command == 'mkfile':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                v.mkfile(args[0])
             elif command == 'quit':
                 disconnect(v)
                 sys.exit()
@@ -43,8 +61,6 @@ def disconnect(v):
 
 def connect_volume(command_list, old):
     args = get_args(command_list)
-    if len(args) < 1:
-        raise ValueError("invalid command")
     volume_name = args[0]
     disconnect(old)
     return volume.Volume(volume_name)
