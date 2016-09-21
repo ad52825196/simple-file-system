@@ -24,12 +24,18 @@ def main():
                     raise ValueError("no volume is connected")
                 args = get_args(command_list)
                 entry_list = v.ls(args[0])
-                LS_FORMAT = "{:4}    {:8}    {:4}"
-                title = LS_FORMAT.format('type', 'filename', 'size')
+                LS_FORMAT = "{:{NAME_LENGTH}}    {:{TYPE_LENGTH}}    {:{SIZE_LENGTH}}"
+                title = LS_FORMAT.format('name', 'type', 'size', 
+                    NAME_LENGTH = max(4, directoryentry.DirectoryEntry.MAX_FILE_NAME_LENGTH), 
+                    TYPE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_TYPE_LENGTH), 
+                    SIZE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_SIZE_LENGTH))
                 print(title)
                 print("-" * len(title))
                 for entry in entry_list:
-                    print(LS_FORMAT.format(entry.file_type, entry.file_name, entry.file_length))
+                    print(LS_FORMAT.format(entry.file_name, entry.file_type, entry.file_length, 
+                        NAME_LENGTH = max(4, directoryentry.DirectoryEntry.MAX_FILE_NAME_LENGTH), 
+                        TYPE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_TYPE_LENGTH), 
+                        SIZE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_SIZE_LENGTH)))
             elif command == 'mkfile':
                 if v is None:
                     raise ValueError("no volume is connected")
@@ -40,6 +46,19 @@ def main():
                     raise ValueError("no volume is connected")
                 args = get_args(command_list)
                 v.mkdir(args[0])
+            elif command == 'append':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                if len(args) < 2:
+                    raise ValueError("invalid command")
+                v.append(args[0], args[1])
+            elif command == 'print':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                content, entry = v.get_file_content(args[0])
+                print(content)
             elif command == 'quit':
                 disconnect(v)
                 sys.exit()

@@ -42,16 +42,20 @@ class Volume:
         directory_list, file_name = Volume.get_directory_and_file_name(path_list)
         block_number_list, directory = self.locate_directory(directory_list)
         entry_list = self.get_block_number_list_directory_entry(block_number_list)
-        for entry in entry_list:
-            if  entry.file_type == file_type and entry.file_name == file_name:
-                raise ValueError("name exists in the directory")
+        entry = Volume.find_entry_in_entry_list(file_type, file_name, entry_list)
+        if entry is not None:
+            raise ValueError("name exists in the directory")
         empty_entry_list = self.get_block_number_list_directory_entry(block_number_list, True)
         if len(empty_entry_list) > 0:
             entry = empty_entry_list[0]
         elif directory is not None:
             # not root directory
             block_number = self.allocate_new_directory_block()
-            directory.add_new_block(block_number)
+            try:
+                directory.add_new_block(block_number)
+            except:
+                self.write_block(block_number, release = True)
+                raise
             directory.file_length += drive.Drive.BLK_SIZE
             self.write_entry(directory)
             entry = directoryentry.DirectoryEntry(block_number = block_number)
@@ -64,15 +68,33 @@ class Volume:
     def mkdir(self, full_pathname):
         self.mkfile(full_pathname, directoryentry.DirectoryEntry.DIRECTORY)
 
+    def append(self, full_pathname, data):
+        content, entry = self.get_file_content(full_pathname)
+        content += data
+        entry = self.write_file_content(entry, content)
+        self.write_entry(entry)
+
+    def get_file_content(self, full_pathname):
+        """Return the file content along with the directory entry of this file."""
+        path_list = Volume.get_path_list(full_pathname)
+        directory_list, file_name = Volume.get_directory_and_file_name(path_list)
+        block_number_list, directory = self.locate_directory(directory_list)
+        entry_list = self.get_block_number_list_directory_entry(block_number_list)
+        entry = Volume.find_entry_in_entry_list(directoryentry.DirectoryEntry.FILE, file_name, entry_list)
+        if entry is None:
+            raise ValueError("file '{}' does not exist".format(file_name))
+        return self.get_entry_content(entry), entry
+
     def modify_block(block, start, data):
         end = start + len(data)
         if end > len(block):
             raise ValueError("invalid internal data")
         return block[:start] + data + block[end:]
 
-    def write_block(self, n, data = None, release = False):
+    def write_block(self, n, data = '', release = False):
         if release:
             data = drive.Drive.EMPTY_BLK
+        data += ' ' * (drive.Drive.BLK_SIZE - len(data))
         self.drive.write_block(n, data)
         block = self.drive.read_block(0)
         if release:
@@ -168,3 +190,30 @@ class Volume:
         block = self.drive.read_block(entry.block_number)
         block = Volume.modify_block(block, entry.start, str(entry))
         self.write_block(entry.block_number, block)
+
+    def find_entry_in_entry_list(file_type, file_name, entry_list):
+        """Return the found DirectoryEntry object in the entry_list or None if does not exist."""
+        for entry in entry_list:
+            if  entry.file_type == file_type and entry.file_name == file_name:
+                return entry
+
+    def get_entry_content(self, entry):
+        content = ''
+        block_number_list = entry.get_valid_blocks()
+        for block_number in block_number_list:
+            content += self.drive.read_block(block_number)
+        return content[:entry.file_length]
+
+    def write_file_content(self, entry, content):
+        entry.file_length = 0
+        block_number_list = entry.get_valid_blocks()
+        while len(content) > 0:
+            if len(block_number_list) > 0:
+                block_number = block_number_list.pop(0)
+            else:
+                block_number = self.find_free_block()
+                entry.add_new_block(block_number)
+            self.write_block(block_number, content[:drive.Drive.BLK_SIZE])
+            entry.file_length += min(drive.Drive.BLK_SIZE, len(content))
+            content = content[drive.Drive.BLK_SIZE:]
+        return entry
