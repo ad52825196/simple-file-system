@@ -44,7 +44,7 @@ class Volume:
         entry_list = self.get_block_number_list_directory_entry(block_number_list)
         entry = Volume.find_entry_in_entry_list(file_type, file_name, entry_list)
         if entry is not None:
-            raise ValueError("name exists in the directory")
+            raise ValueError("'{}' exists in the directory".format(file_name))
         empty_entry_list = self.get_block_number_list_directory_entry(block_number_list, True)
         if len(empty_entry_list) > 0:
             entry = empty_entry_list[0]
@@ -84,6 +84,27 @@ class Volume:
         if entry is None:
             raise ValueError("file '{}' does not exist".format(file_name))
         return self.get_entry_content(entry), entry
+
+    def delfile(self, full_pathname, file_type = directoryentry.DirectoryEntry.FILE):
+        path_list = Volume.get_path_list(full_pathname)
+        directory_list, file_name = Volume.get_directory_and_file_name(path_list)
+        block_number_list, directory = self.locate_directory(directory_list)
+        entry_list = self.get_block_number_list_directory_entry(block_number_list)
+        entry = Volume.find_entry_in_entry_list(file_type, file_name, entry_list)
+        if entry is None:
+            raise ValueError("'{}' does not exist".format(file_name))
+        block_number_list = entry.get_valid_blocks()
+        if file_type == directoryentry.DirectoryEntry.DIRECTORY:
+            entry_list = self.get_block_number_list_directory_entry(block_number_list)
+            if len(entry_list) > 0:
+                raise IOError("directory is not empty")
+        for block_number in block_number_list:
+            self.write_block(block_number, release = True)
+        entry = directoryentry.DirectoryEntry(block_number = entry.block_number, start = entry.start)
+        self.write_entry(entry)
+
+    def deldir(self, full_pathname):
+        self.delfile(full_pathname, directoryentry.DirectoryEntry.DIRECTORY)
 
     def modify_block(block, start, data):
         end = start + len(data)
@@ -150,16 +171,10 @@ class Volume:
         for directory in directory_list:
             entry_list = self.get_block_number_list_directory_entry(block_number_list)
             # find the directory
-            found = False
-            i = 0
-            while not found and i < len(entry_list):
-                entry = entry_list[i]
-                i += 1
-                if entry.file_type == directoryentry.DirectoryEntry.DIRECTORY and entry.file_name == directory:
-                    found = True
-                    block_number_list = entry.get_valid_blocks()
-            if not found:
+            entry = Volume.find_entry_in_entry_list(directoryentry.DirectoryEntry.DIRECTORY, directory, entry_list)
+            if entry is None:
                 raise ValueError("directory '{}' dose not exist".format(directory))
+            block_number_list = entry.get_valid_blocks()
         return block_number_list, entry
 
     def allocate_new_directory_block(self):

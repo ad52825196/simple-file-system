@@ -7,9 +7,11 @@ def main():
     v = None
     while True:
         try:
-            command_list = input("> ").strip().split(maxsplit = 1)
+            command_list = input().strip().split(maxsplit = 1)
             command = get_command(command_list)
-            if command == 'format':
+            if command is None:
+                pass
+            elif command == 'format':
                 v = connect_volume(command_list, v)
                 v.format()
             elif command == 'reconnect':
@@ -29,6 +31,7 @@ def main():
                     NAME_LENGTH = max(4, directoryentry.DirectoryEntry.MAX_FILE_NAME_LENGTH), 
                     TYPE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_TYPE_LENGTH), 
                     SIZE_LENGTH = max(4, directoryentry.DirectoryEntry.FILE_SIZE_LENGTH))
+                print("Currently showing directory {}".format(args[0]))
                 print(title)
                 print("-" * len(title))
                 for entry in entry_list:
@@ -59,17 +62,30 @@ def main():
                 args = get_args(command_list)
                 content, entry = v.get_file_content(args[0])
                 print(content)
+            elif command == 'delfile':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                v.delfile(args[0])
+            elif command == 'deldir':
+                if v is None:
+                    raise ValueError("no volume is connected")
+                args = get_args(command_list)
+                v.deldir(args[0])
             elif command == 'quit':
                 disconnect(v)
                 sys.exit()
             else:
                 raise ValueError("invalid command")
+        except EOFError:
+            disconnect(v)
+            sys.exit()
         except Exception as e:
             print(e)
 
 def get_command(command_list):
     if len(command_list) < 1:
-        raise ValueError("invalid command")
+        return None
     return command_list[0]
 
 def get_args(command_list):
