@@ -150,6 +150,8 @@ class Volume:
         file_name = path_list[-1]
         if len(file_name) == 0:
             raise ValueError("no file name specified")
+        if make and len(file_name) > directoryentry.DirectoryEntry.MAX_FILE_NAME_LENGTH:
+            raise ValueError("file name too long")
         if ' ' in file_name:
             raise ValueError("cannot have spaces in file name")
         parent_entry = None
