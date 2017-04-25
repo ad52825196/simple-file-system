@@ -1,4 +1,4 @@
-# TinyDOS simple file system
+# TinyDOS Simple File System
 
 This is a very simple disk operating system called TinyDOS which provides the ability to store and retrieve data on a virtual drive.
 
